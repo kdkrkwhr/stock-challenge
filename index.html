@@ -417,6 +417,31 @@
       line-height: 1;
       margin-right: -0.2rem;
     }
+    .share-bar {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.85rem;
+    }
+    .share-btn {
+      background: rgba(8, 12, 20, 0.7);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 0.5rem 0.8rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .share-btn:hover { border-color: var(--accent); color: var(--text); }
+    .share-btn.ghost { color: var(--muted); }
+    .share-msg {
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
   </style>
 </head>
 <body>
@@ -457,6 +482,11 @@
       <button type="button" class="tab active" data-m="all">전체</button>
       <button type="button" class="tab" data-m="KR">KR</button>
       <button type="button" class="tab" data-m="US">US</button>
+    </div>
+    <div class="share-bar" id="shareBar">
+      <button type="button" class="share-btn" id="btnCopy">📋 픽 공유(복사)</button>
+      <button type="button" class="share-btn ghost" id="btnImport">⬇ 가져오기</button>
+      <span class="share-msg" id="shareMsg"></span>
     </div>
     <div class="hl-bar" id="hl"></div>
     <div id="list" class="rank-list"></div>
@@ -837,6 +867,44 @@
         list.appendChild(el);
       });
     }
+
+    const btnCopy = document.getElementById("btnCopy");
+    const btnImport = document.getElementById("btnImport");
+    const shareMsg = document.getElementById("shareMsg");
+    function shareCode() {
+      return btoa(unescape(encodeURIComponent(JSON.stringify({ n: nick || "", p: picks }))));
+    }
+    btnCopy.addEventListener("click", async () => {
+      const code = shareCode();
+      try {
+        await navigator.clipboard.writeText(code);
+      } catch {
+        prompt("이 코드 복사해서 친구한테 보내:", code);
+      }
+      shareMsg.textContent = "복사됨! 친구한테 붙여넣기 해";
+      setTimeout(() => (shareMsg.textContent = ""), 2000);
+    });
+    btnImport.addEventListener("click", () => {
+      const code = prompt("친구한테 받은 공유코드 붙여넣기:");
+      if (!code) return;
+      try {
+        const obj = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
+        const np = Array.isArray(obj.p) ? obj.p : [];
+        const before = picks.length;
+        np.forEach((c) => { if (!picks.includes(c)) picks.push(c); });
+        savePicks();
+        if (obj.n) {
+          nick = String(obj.n).slice(0, 16);
+          localStorage.setItem(LS_NICK, nick);
+          nickChip.textContent = nick;
+        }
+        shareMsg.textContent = (picks.length - before) + "종목 추가됨";
+        setTimeout(() => (shareMsg.textContent = ""), 2000);
+        render();
+      } catch {
+        alert("코드 이상함 ㅋㅋ 다시 확인해");
+      }
+    });
 
     fetchData().catch((e) => {
       document.getElementById("updated").textContent = "데이터 로드 실패: " + e.message;
