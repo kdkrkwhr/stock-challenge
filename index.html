@@ -393,6 +393,30 @@
       font-size: 0.82rem;
     }
     .offline-banner.show { display: flex; }
+    .hl-bar {
+      display: none;
+      gap: 0.5rem;
+      margin-bottom: 0.9rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .hl-bar.show { display: flex; }
+    .hl-bar span {
+      flex: 1;
+      border-radius: 12px;
+      padding: 0.55rem 0.75rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .hl-up { background: rgba(255, 77, 109, 0.14); border: 1px solid rgba(255, 77, 109, 0.4); color: var(--up); }
+    .hl-down { background: rgba(61, 158, 255, 0.14); border: 1px solid rgba(61, 158, 255, 0.4); color: var(--down); }
+    .tag {
+      font-size: 0.95rem;
+      line-height: 1;
+      margin-right: -0.2rem;
+    }
   </style>
 </head>
 <body>
@@ -434,6 +458,7 @@
       <button type="button" class="tab" data-m="KR">KR</button>
       <button type="button" class="tab" data-m="US">US</button>
     </div>
+    <div class="hl-bar" id="hl"></div>
     <div id="list" class="rank-list"></div>
   </main>
 
@@ -710,6 +735,22 @@
       const finite = rows.filter((r) => Number.isFinite(r.pct)).map((r) => Math.abs(r.pct));
       const maxAbs = Math.max(1, ...finite);
 
+      let bestIdx = -1, worstIdx = -1, bestP = -Infinity, worstP = Infinity;
+      rows.forEach((r, i) => {
+        if (!Number.isFinite(r.pct)) return;
+        if (r.pct > bestP) { bestP = r.pct; bestIdx = i; }
+        if (r.pct < worstP) { worstP = r.pct; worstIdx = i; }
+      });
+      const hl = document.getElementById("hl");
+      if (bestIdx >= 0 && worstIdx >= 0) {
+        hl.innerHTML =
+          '<span class="hl-up">🚀 ' + rows[bestIdx].row.name + " " + fmtPct(rows[bestIdx].row.change_pct) + "</span>" +
+          '<span class="hl-down">🔻 ' + rows[worstIdx].row.name + " " + fmtPct(rows[worstIdx].row.change_pct) + "</span>";
+        hl.classList.add("show");
+      } else {
+        hl.classList.remove("show");
+      }
+
       rows.forEach((item, i) => {
         const { code, row, pct } = item;
         const el = document.createElement("article");
@@ -739,6 +780,7 @@
           '<button class="rm" title="삭제" aria-label="삭제">×</button>' +
           '<div class="rank-top">' +
           '<div class="rank-num' + (i < 3 ? " top3" : "") + '">' + (i + 1) + "</div>" +
+          '<span class="tag"></span>' +
           logo +
           '<div class="rank-info"><div class="name"></div><div class="meta-line"></div></div>' +
           '<div class="rank-pct ' + chgClass + '"></div>' +
@@ -753,6 +795,10 @@
         el.querySelector(".name").textContent = row.name || code;
         el.querySelector(".meta-line").textContent = metaBits.join(" · ") || code;
         el.querySelector(".rm").addEventListener("click", () => removePick(code));
+
+        const tag = el.querySelector(".tag");
+        if (i === bestIdx) tag.textContent = "🚀";
+        else if (i === worstIdx) tag.textContent = "🔻";
 
         if (row.error) {
           el.querySelector(".err").textContent = row.error;
