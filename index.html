@@ -487,6 +487,19 @@
       font-weight: 800;
       z-index: 2;
     }
+    .fav {
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+      font-size: 1.15rem;
+      line-height: 1;
+      padding: 0.15rem 0.25rem;
+      color: var(--muted);
+      opacity: 0.55;
+      transition: all 0.15s ease;
+    }
+    .fav.on { color: #ffd24a; opacity: 1; }
+    .fav:hover { opacity: 1; }
   </style>
 </head>
 <body>
@@ -546,6 +559,16 @@
     const LS_INSTALL_HIDE = "stock-challenge-install-hide";
     const LS_THRESH = "stock-challenge-threshold";
     const LS_SORT = "stock-challenge-sort";
+    const LS_FAV = "stock-challenge-favs";
+    let favs = (() => {
+      try { return new Set(JSON.parse(localStorage.getItem(LS_FAV) || "[]")); } catch { return new Set(); }
+    })();
+    function saveFavs() { localStorage.setItem(LS_FAV, JSON.stringify([...favs])); }
+    function toggleFav(code) {
+      if (favs.has(code)) favs.delete(code); else favs.add(code);
+      saveFavs();
+      render();
+    }
     let data = { updated: null, stocks: {} };
     let picks = loadPicks();
     let nick = localStorage.getItem(LS_NICK) || "";
@@ -872,7 +895,14 @@
           "</div>";
         return;
       }
-      if (sortMode !== "order") rows.sort((a, b) => b.pct - a.pct);
+      const favRank = (c) => (favs.has(c) ? 0 : 1);
+      if (sortMode === "order") {
+        const oi = (c) => picks.indexOf(c);
+        rows.sort((a, b) => favRank(a.code) - favRank(b.code) || oi(a.code) - oi(b.code));
+      } else {
+        const pv = (r) => (Number.isFinite(r.pct) ? r.pct : -Infinity);
+        rows.sort((a, b) => favRank(a.code) - favRank(b.code) || pv(b) - pv(a));
+      }
 
       const finite = rows.filter((r) => Number.isFinite(r.pct)).map((r) => Math.abs(r.pct));
       const maxAbs = Math.max(1, ...finite);
@@ -921,6 +951,7 @@
         el.innerHTML =
           '<button class="rm" title="삭제" aria-label="삭제">×</button>' +
           '<div class="rank-top">' +
+          '<button type="button" class="fav' + (favs.has(code) ? " on" : "") + '" title="즐겨찾기">★</button>' +
           '<div class="rank-num' + (i < 3 ? " top3" : "") + '">' + (i + 1) + "</div>" +
           '<span class="tag"></span>' +
           logo +
@@ -937,6 +968,7 @@
         el.querySelector(".name").textContent = row.name || code;
         el.querySelector(".meta-line").textContent = metaBits.join(" · ") || code;
         el.querySelector(".rm").addEventListener("click", () => removePick(code));
+        el.querySelector(".fav").addEventListener("click", (e) => { e.stopPropagation(); toggleFav(code); });
 
         const tag = el.querySelector(".tag");
         if (sortMode === "pct") {
