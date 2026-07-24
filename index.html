@@ -4,181 +4,353 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>스톡챌린지</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet" />
   <style>
     :root {
-      --bg: #0e1117;
-      --panel: #161b22;
-      --border: #30363d;
-      --text: #e6edf3;
-      --muted: #8b949e;
-      --up: #f85149;
-      --down: #58a6ff;
-      --accent: #3fb950;
-      --input: #0d1117;
+      --bg0: #07090f;
+      --bg1: #0f1420;
+      --panel: rgba(22, 28, 42, 0.85);
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #f2f4f8;
+      --muted: #8b95a8;
+      --up: #ff4d6d;
+      --down: #3d9eff;
+      --accent: #00e5a8;
+      --bar-track: rgba(255, 255, 255, 0.06);
+      --nick: #c8d0e0;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-      background: radial-gradient(1200px 600px at 10% -10%, #1a2332 0%, var(--bg) 55%);
+      background:
+        radial-gradient(900px 500px at 85% -10%, rgba(0, 229, 168, 0.12), transparent 55%),
+        radial-gradient(700px 400px at -5% 20%, rgba(61, 158, 255, 0.1), transparent 50%),
+        linear-gradient(180deg, var(--bg1), var(--bg0));
       color: var(--text);
       min-height: 100vh;
     }
     header {
-      padding: 1.25rem 1rem 0.5rem;
-      max-width: 960px;
+      max-width: 720px;
       margin: 0 auto;
+      padding: 1.5rem 1.1rem 0.4rem;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1rem;
     }
-    h1 {
+    .brand h1 {
       margin: 0;
-      font-size: 1.5rem;
-      letter-spacing: -0.02em;
+      font-size: 1.65rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
     }
-    .meta {
+    .brand .meta {
       color: var(--muted);
-      font-size: 0.85rem;
-      margin-top: 0.35rem;
+      font-size: 0.8rem;
+      margin-top: 0.3rem;
     }
+    .nick-chip {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.4rem 0.85rem;
+      font-size: 0.85rem;
+      color: var(--nick);
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      white-space: nowrap;
+    }
+    .nick-chip:hover { border-color: var(--accent); color: var(--text); }
     main {
-      max-width: 960px;
+      max-width: 720px;
       margin: 0 auto;
-      padding: 1rem;
+      padding: 0.75rem 1.1rem 2.5rem;
     }
     .add-row {
       display: flex;
       gap: 0.5rem;
       position: relative;
-      margin-bottom: 1rem;
+      margin-bottom: 1.1rem;
     }
     .add-row input {
       flex: 1;
-      background: var(--input);
+      background: rgba(8, 12, 20, 0.7);
       border: 1px solid var(--border);
       color: var(--text);
-      border-radius: 8px;
-      padding: 0.7rem 0.85rem;
+      border-radius: 14px;
+      padding: 0.85rem 1rem;
       font-size: 1rem;
     }
     .add-row input:focus {
-      outline: 1px solid var(--accent);
+      outline: none;
       border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0, 229, 168, 0.15);
     }
     .dropdown {
       position: absolute;
-      top: calc(100% + 4px);
+      top: calc(100% + 6px);
       left: 0;
       right: 0;
-      background: var(--panel);
+      background: #121826;
       border: 1px solid var(--border);
-      border-radius: 8px;
-      max-height: 240px;
+      border-radius: 14px;
+      max-height: 280px;
       overflow-y: auto;
-      z-index: 20;
+      z-index: 30;
       display: none;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
     }
     .dropdown.open { display: block; }
     .dropdown button {
-      display: block;
+      display: flex;
       width: 100%;
+      align-items: center;
+      gap: 0.65rem;
       text-align: left;
       background: transparent;
       border: 0;
       color: var(--text);
-      padding: 0.65rem 0.85rem;
+      padding: 0.7rem 0.9rem;
       cursor: pointer;
       font-size: 0.95rem;
     }
     .dropdown button:hover,
-    .dropdown button.active { background: #21262d; }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 0.75rem;
+    .dropdown button.active { background: rgba(255, 255, 255, 0.05); }
+    .dropdown .logo {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: #1a2233;
+      object-fit: contain;
+      flex-shrink: 0;
     }
-    .card {
+    .dropdown .sub {
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+    .rank-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+    .rank-row {
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1rem;
+      border-radius: 16px;
+      padding: 0.85rem 0.95rem 0.95rem;
+      backdrop-filter: blur(10px);
+      position: relative;
+      animation: rise 0.35s ease both;
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+    .rank-top {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin-bottom: 0.55rem;
+    }
+    .rank-num {
+      width: 1.6rem;
+      text-align: center;
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .rank-num.top3 { color: var(--accent); }
+    .rank-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: #1a2233;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .rank-logo.fallback {
+      display: grid;
+      place-items: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .rank-info { flex: 1; min-width: 0; }
+    .rank-info .name {
+      font-weight: 700;
+      font-size: 1.02rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .rank-info .meta-line {
+      color: var(--muted);
+      font-size: 0.75rem;
+      margin-top: 0.1rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .rank-pct {
+      font-weight: 800;
+      font-size: 1.05rem;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .rank-pct.up { color: var(--up); }
+    .rank-pct.down { color: var(--down); }
+    .rank-pct.flat { color: var(--muted); }
+    .bar-track {
+      height: 10px;
+      border-radius: 999px;
+      background: var(--bar-track);
+      overflow: hidden;
       position: relative;
     }
-    .card .name {
-      font-weight: 700;
-      font-size: 1.05rem;
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      width: 0;
+      transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1);
     }
-    .card .code {
+    .bar-fill.up {
+      background: linear-gradient(90deg, #ff7a8a, var(--up));
+    }
+    .bar-fill.down {
+      background: linear-gradient(90deg, #7ab8ff, var(--down));
+    }
+    .bar-fill.flat { background: #5a6578; }
+    .rank-foot {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.4rem;
+      font-size: 0.78rem;
       color: var(--muted);
-      font-size: 0.8rem;
-      margin-left: 0.35rem;
-    }
-    .card .price {
-      font-size: 1.35rem;
-      margin-top: 0.55rem;
       font-variant-numeric: tabular-nums;
     }
-    .card .chg {
-      margin-top: 0.25rem;
-      font-weight: 600;
-      font-variant-numeric: tabular-nums;
-    }
-    .card .chg.up { color: var(--up); }
-    .card .chg.down { color: var(--down); }
-    .card .chg.flat { color: var(--muted); }
-    .card .err {
-      color: #d29922;
-      font-size: 0.85rem;
-      margin-top: 0.5rem;
-    }
-    .card .rm {
+    .rm {
       position: absolute;
-      top: 0.55rem;
-      right: 0.55rem;
+      top: 0.45rem;
+      right: 0.5rem;
       background: transparent;
       border: 0;
       color: var(--muted);
       cursor: pointer;
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       line-height: 1;
-      padding: 0.25rem;
+      padding: 0.2rem;
+      opacity: 0.5;
     }
-    .card .rm:hover { color: var(--up); }
+    .rm:hover { opacity: 1; color: var(--up); }
     .empty {
       color: var(--muted);
       text-align: center;
-      padding: 3rem 1rem;
+      padding: 3.2rem 1rem;
       border: 1px dashed var(--border);
+      border-radius: 16px;
+    }
+    .gate {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 6, 12, 0.78);
+      backdrop-filter: blur(12px);
+      display: grid;
+      place-items: center;
+      z-index: 100;
+      padding: 1rem;
+    }
+    .gate.hidden { display: none; }
+    .gate-card {
+      width: min(400px, 100%);
+      background: #121826;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 1.6rem 1.35rem 1.35rem;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+    }
+    .gate-card h2 {
+      margin: 0 0 0.35rem;
+      font-size: 1.35rem;
+      letter-spacing: -0.03em;
+    }
+    .gate-card p {
+      margin: 0 0 1.1rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+    .gate-card input {
+      width: 100%;
+      background: #0a0e16;
+      border: 1px solid var(--border);
+      color: var(--text);
       border-radius: 12px;
+      padding: 0.85rem 1rem;
+      font-size: 1.05rem;
+      margin-bottom: 0.75rem;
     }
-    sparkline {
-      display: block;
-      margin-top: 0.75rem;
-      height: 36px;
+    .gate-card input:focus {
+      outline: none;
+      border-color: var(--accent);
     }
-    sparkline canvas { width: 100%; height: 36px; }
+    .gate-card button {
+      width: 100%;
+      border: 0;
+      border-radius: 12px;
+      padding: 0.85rem;
+      font-size: 1rem;
+      font-weight: 700;
+      background: var(--accent);
+      color: #04140f;
+      cursor: pointer;
+    }
+    .gate-card button:hover { filter: brightness(1.08); }
+    .err {
+      color: #e3b341;
+      font-size: 0.82rem;
+      margin-top: 0.35rem;
+    }
   </style>
 </head>
 <body>
+  <div class="gate" id="gate">
+    <div class="gate-card">
+      <h2>닉네임 정해</h2>
+      <p>가입 없음. 이 기기에서만 쓰는 별명이야. 나중에 칩 누르면 바꿀 수 있음.</p>
+      <input id="nickInput" type="text" maxlength="16" placeholder="예: 동동" autocomplete="nickname" />
+      <button type="button" id="nickGo">시작</button>
+    </div>
+  </div>
+
   <header>
-    <h1>스톡챌린지</h1>
-    <div class="meta" id="updated">데이터 로딩 중…</div>
+    <div class="brand">
+      <h1>스톡챌린지</h1>
+      <div class="meta" id="updated">데이터 로딩 중…</div>
+    </div>
+    <button type="button" class="nick-chip" id="nickChip" title="닉네임 변경">—</button>
   </header>
+
   <main>
     <div class="add-row">
-      <input id="q" type="search" placeholder="종목 코드 또는 이름 검색" autocomplete="off" />
+      <input id="q" type="search" placeholder="종목·회사명 검색 (테슬라, 삼성…)" autocomplete="off" />
       <div class="dropdown" id="dd"></div>
     </div>
-    <div id="list" class="grid"></div>
+    <div id="list" class="rank-list"></div>
   </main>
+
   <script>
-    const LS_KEY = "stock-challenge-picks";
-    const HISTORY_KEY = "stock-challenge-history";
+    const LS_PICKS = "stock-challenge-picks";
+    const LS_NICK = "stock-challenge-nick";
     let data = { updated: null, stocks: {} };
     let picks = loadPicks();
-    let history = loadHistory();
+    let nick = localStorage.getItem(LS_NICK) || "";
 
     function loadPicks() {
       try {
-        const raw = localStorage.getItem(LS_KEY);
+        const raw = localStorage.getItem(LS_PICKS);
         const arr = raw ? JSON.parse(raw) : [];
         return Array.isArray(arr) ? arr : [];
       } catch {
@@ -186,24 +358,44 @@
       }
     }
     function savePicks() {
-      localStorage.setItem(LS_KEY, JSON.stringify(picks));
-    }
-    function loadHistory() {
-      try {
-        const raw = localStorage.getItem(HISTORY_KEY);
-        const obj = raw ? JSON.parse(raw) : {};
-        return obj && typeof obj === "object" ? obj : {};
-      } catch {
-        return {};
-      }
-    }
-    function saveHistory() {
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      localStorage.setItem(LS_PICKS, JSON.stringify(picks));
     }
 
-    function fmtPrice(n) {
+    const gate = document.getElementById("gate");
+    const nickInput = document.getElementById("nickInput");
+    const nickChip = document.getElementById("nickChip");
+
+    function applyNick(name) {
+      nick = (name || "").trim().slice(0, 16);
+      if (!nick) return false;
+      localStorage.setItem(LS_NICK, nick);
+      nickChip.textContent = nick;
+      gate.classList.add("hidden");
+      return true;
+    }
+    function showGate(prefill) {
+      gate.classList.remove("hidden");
+      nickInput.value = prefill || nick || "";
+      setTimeout(() => nickInput.focus(), 50);
+    }
+    if (nick) applyNick(nick);
+    else showGate();
+
+    document.getElementById("nickGo").addEventListener("click", () => {
+      if (!applyNick(nickInput.value)) nickInput.focus();
+    });
+    nickInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") document.getElementById("nickGo").click();
+    });
+    nickChip.addEventListener("click", () => showGate(nick));
+
+    function fmtPrice(n, currency) {
       if (n == null) return "—";
-      return Number(n).toLocaleString("ko-KR");
+      const v = Number(n);
+      if (currency === "USD") {
+        return "$" + v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+      return Math.round(v).toLocaleString("ko-KR") + "원";
     }
     function fmtPct(n) {
       if (n == null) return "—";
@@ -218,21 +410,10 @@
       if (!res.ok) throw new Error("HTTP " + res.status);
       data = await res.json();
       const el = document.getElementById("updated");
+      const n = Object.keys(data.stocks || {}).length;
       el.textContent = data.updated
-        ? "마지막 업데이트: " + data.updated
+        ? "업데이트 " + data.updated + " · " + n + "종목"
         : "업데이트 시각 없음";
-      // sparkline history
-      const stocks = data.stocks || {};
-      for (const [code, row] of Object.entries(stocks)) {
-        if (row.price == null) continue;
-        if (!history[code]) history[code] = [];
-        const arr = history[code];
-        if (!arr.length || arr[arr.length - 1] !== row.price) {
-          arr.push(row.price);
-          if (arr.length > 24) arr.shift();
-        }
-      }
-      saveHistory();
       render();
     }
 
@@ -240,6 +421,11 @@
       return Object.entries(data.stocks || {}).map(([code, row]) => ({
         code,
         name: row.name || code,
+        name_eng: row.name_eng || "",
+        market: row.market || "",
+        industry: row.industry || "",
+        logo: row.logo || "",
+        symbol: row.symbol || code,
       }));
     }
 
@@ -247,10 +433,12 @@
       q = (q || "").trim().toLowerCase();
       if (!q) return [];
       return catalog()
-        .filter(
-          (s) =>
-            s.code.includes(q) ||
-            s.name.toLowerCase().includes(q)
+        .filter((s) =>
+          s.code.toLowerCase().includes(q) ||
+          s.symbol.toLowerCase().includes(q) ||
+          s.name.toLowerCase().includes(q) ||
+          (s.name_eng && s.name_eng.toLowerCase().includes(q)) ||
+          (s.industry && s.industry.toLowerCase().includes(q))
         )
         .slice(0, 12);
     }
@@ -266,11 +454,20 @@
         dd.classList.remove("open");
         return;
       }
-      items.forEach((s, i) => {
+      items.forEach((s) => {
         const b = document.createElement("button");
         b.type = "button";
-        b.textContent = s.name + " (" + s.code + ")";
-        b.dataset.idx = String(i);
+        const logoHtml = s.logo
+          ? '<img class="logo" alt="" src="' + s.logo + '" />'
+          : '<span class="logo" style="display:grid;place-items:center;font-size:0.65rem">' +
+            (s.market || "?") +
+            "</span>";
+        b.innerHTML =
+          logoHtml +
+          "<span><div></div><div class=\"sub\"></div></span>";
+        b.querySelector("div").textContent = s.name + " (" + s.symbol + ")";
+        b.querySelector(".sub").textContent =
+          [s.market, s.industry, s.name_eng].filter(Boolean).join(" · ");
         b.addEventListener("mousedown", (e) => {
           e.preventDefault();
           addPick(s.code);
@@ -298,7 +495,6 @@
         } else {
           const hits = search(input.value);
           if (hits.length === 1) addPick(hits[0].code);
-          else if (/^\d{6}$/.test(input.value.trim())) addPick(input.value.trim());
         }
       } else if (e.key === "Escape") {
         dd.classList.remove("open");
@@ -321,69 +517,84 @@
       render();
     }
 
-    function drawSpark(canvas, values, up) {
-      const ctx = canvas.getContext("2d");
-      const dpr = window.devicePixelRatio || 1;
-      const w = canvas.clientWidth;
-      const h = canvas.clientHeight;
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, w, h);
-      if (!values || values.length < 2) return;
-      const min = Math.min(...values);
-      const max = Math.max(...values);
-      const span = max - min || 1;
-      ctx.beginPath();
-      values.forEach((v, i) => {
-        const x = (i / (values.length - 1)) * (w - 2) + 1;
-        const y = h - 2 - ((v - min) / span) * (h - 4);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      ctx.strokeStyle = up ? "#f85149" : "#58a6ff";
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-    }
-
     function render() {
       const list = document.getElementById("list");
       list.innerHTML = "";
       if (!picks.length) {
-        list.innerHTML = '<div class="empty">종목을 검색해서 내 픽에 추가해봐</div>';
+        list.innerHTML = '<div class="empty">종목 검색해서 픽 추가하면 등락 랭킹바로 뜸</div>';
         return;
       }
-      picks.forEach((code) => {
-        const row = (data.stocks && data.stocks[code]) || { name: code, error: "데이터 없음" };
-        const card = document.createElement("article");
-        card.className = "card";
-        const pct = row.change_pct;
+
+      const rows = picks.map((code) => {
+        const row = (data.stocks && data.stocks[code]) || {
+          name: code,
+          error: "데이터 없음",
+          change_pct: null,
+        };
+        return { code, row, pct: row.change_pct == null ? -Infinity : Number(row.change_pct) };
+      });
+      rows.sort((a, b) => b.pct - a.pct);
+
+      const finite = rows.filter((r) => Number.isFinite(r.pct)).map((r) => Math.abs(r.pct));
+      const maxAbs = Math.max(1, ...finite);
+
+      rows.forEach((item, i) => {
+        const { code, row, pct } = item;
+        const el = document.createElement("article");
+        el.className = "rank-row";
+        el.style.animationDelay = i * 0.04 + "s";
+
         let chgClass = "flat";
-        let arrow = "";
-        if (pct > 0) { chgClass = "up"; arrow = "▲ "; }
-        else if (pct < 0) { chgClass = "down"; arrow = "▼ "; }
-        card.innerHTML =
+        if (pct > 0) chgClass = "up";
+        else if (pct < 0 && Number.isFinite(pct)) chgClass = "down";
+
+        const widthPct = Number.isFinite(pct)
+          ? Math.max(6, Math.round((Math.abs(pct) / maxAbs) * 100))
+          : 6;
+
+        const metaBits = [
+          row.market,
+          row.exchange,
+          row.industry,
+          row.name_eng,
+        ].filter(Boolean);
+
+        const logo = row.logo
+          ? '<img class="rank-logo" alt="" src="' + row.logo + '" />'
+          : '<div class="rank-logo fallback">' + (row.market || "?") + "</div>";
+
+        el.innerHTML =
           '<button class="rm" title="삭제" aria-label="삭제">×</button>' +
-          '<div><span class="name"></span><span class="code"></span></div>' +
+          '<div class="rank-top">' +
+          '<div class="rank-num' + (i < 3 ? " top3" : "") + '">' + (i + 1) + "</div>" +
+          logo +
+          '<div class="rank-info"><div class="name"></div><div class="meta-line"></div></div>' +
+          '<div class="rank-pct ' + chgClass + '"></div>' +
+          "</div>" +
           (row.error
             ? '<div class="err"></div>'
-            : '<div class="price"></div><div class="chg"></div><sparkline><canvas></canvas></sparkline>');
-        card.querySelector(".name").textContent = row.name || code;
-        card.querySelector(".code").textContent = code;
-        card.querySelector(".rm").addEventListener("click", () => removePick(code));
+            : '<div class="bar-track"><div class="bar-fill ' +
+              chgClass +
+              '"></div></div>' +
+              '<div class="rank-foot"><span class="price"></span><span class="sym"></span></div>');
+
+        el.querySelector(".name").textContent = row.name || code;
+        el.querySelector(".meta-line").textContent = metaBits.join(" · ") || code;
+        el.querySelector(".rm").addEventListener("click", () => removePick(code));
+
         if (row.error) {
-          card.querySelector(".err").textContent = row.error;
+          el.querySelector(".err").textContent = row.error;
+          el.querySelector(".rank-pct").textContent = "—";
         } else {
-          card.querySelector(".price").textContent = fmtPrice(row.price) + "원";
-          const chg = card.querySelector(".chg");
-          chg.className = "chg " + chgClass;
-          chg.textContent = arrow + fmtPct(pct);
-          const canvas = card.querySelector("canvas");
-          requestAnimationFrame(() =>
-            drawSpark(canvas, history[code] || [row.price], pct >= 0)
-          );
+          el.querySelector(".rank-pct").textContent = fmtPct(row.change_pct);
+          el.querySelector(".price").textContent = fmtPrice(row.price, row.currency);
+          el.querySelector(".sym").textContent = (row.symbol || code) + (row.currency ? " · " + row.currency : "");
+          const fill = el.querySelector(".bar-fill");
+          requestAnimationFrame(() => {
+            fill.style.width = widthPct + "%";
+          });
         }
-        list.appendChild(card);
+        list.appendChild(el);
       });
     }
 
