@@ -57,6 +57,10 @@
       font-size: 0.8rem;
       margin-top: 0.3rem;
     }
+    .brand .meta .avg { font-weight: 700; margin-left: 0.4rem; }
+    .avg.up { color: var(--up); }
+    .avg.down { color: var(--down); }
+    .avg.flat { color: var(--muted); }
     .nick-chip {
       background: var(--panel);
       border: 1px solid var(--border);
@@ -457,7 +461,7 @@
   <header>
     <div class="brand">
       <h1>스톡챌린지</h1>
-      <div class="meta" id="updated">데이터 로딩 중…</div>
+      <div class="meta"><span id="updated">데이터 로딩 중…</span><span id="avg" class="avg"></span></div>
     </div>
     <button type="button" class="nick-chip" id="nickChip" title="닉네임 변경">—</button>
   </header>
@@ -754,6 +758,24 @@
       render();
     }
 
+    function updateAvg() {
+      const el = document.getElementById("avg");
+      if (!picks.length) { el.textContent = ""; return; }
+      const vals = picks
+        .map((c) => {
+          const r = (data.stocks || {})[c];
+          return r && Number.isFinite(r.change_pct) ? r.change_pct : null;
+        })
+        .filter((v) => v !== null);
+      if (!vals.length) { el.textContent = ""; return; }
+      const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+      let cls = "flat";
+      if (avg > 0) cls = "up";
+      else if (avg < 0) cls = "down";
+      el.className = "avg " + cls;
+      el.textContent = "평균 " + fmtPct(avg);
+    }
+
     function render() {
       const list = document.getElementById("list");
       list.innerHTML = "";
@@ -866,6 +888,7 @@
         }
         list.appendChild(el);
       });
+      updateAvg();
     }
 
     const btnCopy = document.getElementById("btnCopy");
