@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Fetch KR + US stock prices from Naver → stock-data.json (full company info)."""
+"""Fetch ALL KR+US listed stocks via Naver marketValue pages → sharded JSON.
+
+Shards under data/ (one file per exchange). stock-data.json is the manifest.
+List endpoints already include price/change — no per-symbol /basic calls.
+"""
 
 from __future__ import annotations
 
@@ -11,81 +15,53 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-# (code, name, market) — market: KR | US
-# KR: 6-digit KRX code via m.stock.naver.com
-# US: Naver reutersCode e.g. TSLA.O via api.stock.naver.com
-STOCKS: list[tuple[str, str, str]] = [
-    # KR — 시총/인기
-    ("005930", "삼성전자", "KR"),
-    ("000660", "SK하이닉스", "KR"),
-    ("373220", "LG에너지솔루션", "KR"),
-    ("207940", "삼성바이오로직스", "KR"),
-    ("005380", "현대차", "KR"),
-    ("006400", "삼성SDI", "KR"),
-    ("051910", "LG화학", "KR"),
-    ("035420", "NAVER", "KR"),
-    ("000270", "기아", "KR"),
-    ("005490", "POSCO홀딩스", "KR"),
-    ("035720", "카카오", "KR"),
-    ("068270", "셀트리온", "KR"),
-    ("105560", "KB금융", "KR"),
-    ("055550", "신한지주", "KR"),
-    ("012330", "현대모비스", "KR"),
-    ("028260", "삼성물산", "KR"),
-    ("066570", "LG전자", "KR"),
-    ("003670", "포스코퓨처엠", "KR"),
-    ("032830", "삼성생명", "KR"),
-    ("086790", "하나금융지주", "KR"),
-    ("003550", "LG", "KR"),
-    ("017670", "SK텔레콤", "KR"),
-    ("034730", "SK", "KR"),
-    ("015760", "한국전력", "KR"),
-    ("096770", "SK이노베이션", "KR"),
-    ("009150", "삼성전기", "KR"),
-    ("033780", "KT&G", "KR"),
-    ("003490", "대한항공", "KR"),
-    ("030200", "KT", "KR"),
-    ("010130", "고려아연", "KR"),
-    ("011200", "HMM", "KR"),
-    ("018260", "삼성에스디에스", "KR"),
-    ("316140", "우리금융지주", "KR"),
-    ("024110", "기업은행", "KR"),
-    ("034020", "두산에너빌리티", "KR"),
-    ("009540", "HD한국조선해양", "KR"),
-    ("010950", "S-Oil", "KR"),
-    ("259960", "크래프톤", "KR"),
-    ("352820", "하이브", "KR"),
-    ("047810", "한국항공우주", "KR"),
-    ("011070", "LG이노텍", "KR"),
-    ("036570", "엔씨소프트", "KR"),
-    ("251270", "넷마블", "KR"),
-    ("090430", "아모레퍼시픽", "KR"),
-    ("042700", "한미반도체", "KR"),
-    ("138040", "메리츠금융지주", "KR"),
-    ("267250", "HD현대", "KR"),
-    ("000810", "삼성화재", "KR"),
-    ("161390", "한국타이어앤테크놀로지", "KR"),
-    ("012450", "한화에어로스페이스", "KR"),
-    # US — 나스닥/대표
-    ("TSLA.O", "테슬라", "US"),
-    ("AAPL.O", "애플", "US"),
-    ("NVDA.O", "엔비디아", "US"),
-    ("MSFT.O", "마이크로소프트", "US"),
-    ("AMZN.O", "아마존", "US"),
-    ("GOOGL.O", "알파벳A", "US"),
-    ("META.O", "메타", "US"),
-    ("NFLX.O", "넷플릭스", "US"),
-    ("AMD.O", "AMD", "US"),
-    ("INTC.O", "인텔", "US"),
-]
-
+ROOT = Path(__file__).resolve().parent
+DATA_DIR = ROOT / "data"
+MANIFEST = ROOT / "stock-data.json"
 UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/122.0.0.0 Safari/537.36"
 )
-OUT = Path(__file__).resolve().parent / "stock-data.json"
-TIMEOUT = 15
+TIMEOUT = 30
+PAGE_SIZE = 100
+# ponytail: naive throttle; bump if Actions starts getting 429s
+SLEEP_EVERY = 5
+SLEEP_SEC = 0.35
+
+# (market, exchange_slug, list_url, shard_relpath)
+SOURCES: list[tuple[str, str, str, str]] = [
+    (
+        "KR",
+        "KOSPI",
+        "https://m.stock.naver.com/api/stocks/marketValue/KOSPI",
+        "data/kospi.json",
+    ),
+    (
+        "KR",
+        "KOSDAQ",
+        "https://m.stock.naver.com/api/stocks/marketValue/KOSDAQ",
+        "data/kosdaq.json",
+    ),
+    (
+        "US",
+        "NASDAQ",
+        "https://api.stock.naver.com/stock/exchange/NASDAQ/marketValue",
+        "data/nasdaq.json",
+    ),
+    (
+        "US",
+        "NYSE",
+        "https://api.stock.naver.com/stock/exchange/NYSE/marketValue",
+        "data/nyse.json",
+    ),
+    (
+        "US",
+        "AMEX",
+        "https://api.stock.naver.com/stock/exchange/AMEX/marketValue",
+        "data/amex.json",
+    ),
+]
 
 
 def _now_iso() -> str:
@@ -128,92 +104,157 @@ def _industry(payload: dict) -> str | None:
     return None
 
 
-def _exchange(payload: dict) -> str | None:
+def _exchange(payload: dict, fallback: str) -> str:
     ex = payload.get("stockExchangeType")
     if isinstance(ex, dict):
-        return ex.get("nameKor") or ex.get("name") or ex.get("nameEng")
-    return payload.get("stockExchangeName")
+        return ex.get("nameKor") or ex.get("name") or ex.get("nameEng") or fallback
+    if isinstance(ex, str) and ex:
+        return ex
+    return payload.get("stockExchangeName") or fallback
 
 
-def fetch_one(code: str, fallback_name: str, market: str) -> dict:
-    if market == "US":
-        url = f"https://api.stock.naver.com/stock/{code}/basic"
-    else:
-        url = f"https://m.stock.naver.com/api/stock/{code}/basic"
-
+def _get_json(url: str) -> dict:
     req = Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
-    try:
-        with urlopen(req, timeout=TIMEOUT) as resp:
-            payload = json.loads(resp.read().decode("utf-8"))
-    except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError) as e:
-        return {
-            "name": fallback_name,
-            "name_eng": None,
-            "symbol": code.split(".")[0],
-            "market": market,
-            "exchange": None,
-            "industry": None,
-            "currency": "USD" if market == "US" else "KRW",
-            "logo": None,
-            "error": str(e),
-            "updated": _now_iso(),
-        }
+    with urlopen(req, timeout=TIMEOUT) as resp:
+        return json.loads(resp.read().decode("utf-8"))
 
-    name = payload.get("stockName") or fallback_name
-    name_eng = payload.get("stockNameEng")
-    symbol = payload.get("symbolCode") or code.split(".")[0]
-    price = _parse_price(payload.get("closePrice"))
-    change_pct = _parse_pct(payload.get("fluctuationsRatio"))
-    updated = payload.get("localTradedAt") or _now_iso()
-    logo = payload.get("itemLogoPngUrl") or payload.get("itemLogoUrl")
 
-    base = {
+def row_from_list_item(item: dict, market: str, exchange_slug: str) -> tuple[str, dict] | None:
+    """Normalize a marketValue list item → (key, row). Skip junk rows."""
+    if item.get("stockEndType") and item.get("stockEndType") not in ("stock", "etf", "etn"):
+        # keep ETF/ETN too — they're pickable; skip only weird types
+        pass
+
+    symbol = (
+        item.get("symbolCode")
+        or item.get("itemCode")
+        or (item.get("reutersCode") or "").split(".")[0]
+    )
+    if not symbol:
+        return None
+    symbol = str(symbol).strip()
+    if not symbol:
+        return None
+
+    # KR keys stay 6-digit codes; US keys stay ticker (TSLA)
+    key = str(item.get("itemCode") or symbol).strip()
+    if market == "US":
+        key = symbol
+
+    name = item.get("stockName") or symbol
+    price = _parse_price(item.get("closePrice"))
+    change_pct = _parse_pct(item.get("fluctuationsRatio"))
+    logo = item.get("itemLogoPngUrl") or item.get("itemLogoUrl")
+    updated = item.get("localTradedAt") or _now_iso()
+
+    row: dict = {
         "name": name,
-        "name_eng": name_eng,
+        "name_eng": item.get("stockNameEng"),
         "symbol": symbol,
         "market": market,
-        "exchange": _exchange(payload),
-        "industry": _industry(payload),
-        "currency": _currency(payload, market),
+        "exchange": _exchange(item, exchange_slug),
+        "industry": _industry(item),
+        "currency": _currency(item, market),
         "logo": logo,
         "updated": updated,
     }
-
     if price is None:
-        return {**base, "error": "parse_failed: price not found", "updated": _now_iso()}
+        row["error"] = "parse_failed: price not found"
+    else:
+        row["price"] = price
+        row["change_pct"] = change_pct if change_pct is not None else 0.0
+    return key, row
 
-    return {
-        **base,
-        "price": price,
-        "change_pct": change_pct if change_pct is not None else 0.0,
-    }
+
+def fetch_market(market: str, exchange_slug: str, base_url: str) -> dict[str, dict]:
+    results: dict[str, dict] = {}
+    page = 1
+    total = None
+    reqs = 0
+    while True:
+        sep = "&" if "?" in base_url else "?"
+        url = f"{base_url}{sep}page={page}&pageSize={PAGE_SIZE}"
+        try:
+            payload = _get_json(url)
+        except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError) as e:
+            print(f"[ERR] {exchange_slug} page {page}: {e}", file=sys.stderr)
+            break
+
+        reqs += 1
+        if total is None:
+            total = int(payload.get("totalCount") or 0)
+            print(f"[{exchange_slug}] totalCount={total}")
+
+        stocks = payload.get("stocks") or []
+        if not stocks:
+            break
+
+        for item in stocks:
+            if not isinstance(item, dict):
+                continue
+            parsed = row_from_list_item(item, market, exchange_slug)
+            if not parsed:
+                continue
+            key, row = parsed
+            results[key] = row
+
+        print(f"[{exchange_slug}] page {page}: +{len(stocks)} (acc {len(results)})")
+
+        if total and len(results) >= total:
+            break
+        if len(stocks) < PAGE_SIZE:
+            break
+        page += 1
+        if reqs % SLEEP_EVERY == 0:
+            time.sleep(SLEEP_SEC)
+
+    return results
 
 
 def main() -> int:
-    results: dict[str, dict] = {}
-    ok = 0
-    for i, (code, name, market) in enumerate(STOCKS):
-        if i and i % 8 == 0:
-            time.sleep(0.4)  # ponytail: naive throttle so Actions doesn't trip rate limits
-        row = fetch_one(code, name, market)
-        # key: KR=6digit, US=symbol (TSLA) so search/UI stays clean
-        key = row.get("symbol") or code.split(".")[0]
-        results[key] = row
-        if "error" in row:
-            print(f"[ERR] {key} {name}: {row['error']}", file=sys.stderr)
-        else:
-            ok += 1
-            cur = row.get("currency") or ""
-            print(f"[OK]  {key} {row['name']}: {row['price']} {cur} ({row['change_pct']}%)")
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    shards_meta: list[dict] = []
+    grand_ok = 0
+    grand_n = 0
 
-    payload = {
+    for market, exchange_slug, url, rel in SOURCES:
+        stocks = fetch_market(market, exchange_slug, url)
+        ok = sum(1 for r in stocks.values() if "error" not in r)
+        grand_ok += ok
+        grand_n += len(stocks)
+
+        out = ROOT / rel
+        out.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "updated": _now_iso(),
+            "market": market,
+            "exchange": exchange_slug,
+            "count": len(stocks),
+            "stocks": stocks,
+        }
+        out.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        size_kb = out.stat().st_size / 1024
+        print(f"Wrote {out} ({ok}/{len(stocks)} ok, {size_kb:.0f} KB)")
+        shards_meta.append(
+            {
+                "path": rel.replace("\\", "/"),
+                "market": market,
+                "exchange": exchange_slug,
+                "count": len(stocks),
+            }
+        )
+
+    manifest = {
         "updated": _now_iso(),
-        "count": len(results),
-        "stocks": results,
+        "count": grand_n,
+        "ok": grand_ok,
+        "shards": shards_meta,
+        # empty — prices live in shards; kept for old clients that expect .stocks
+        "stocks": {},
     }
-    OUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"\nWrote {OUT} ({ok}/{len(STOCKS)} ok)")
-    return 0 if ok > 0 else 1
+    MANIFEST.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"\nManifest {MANIFEST} — {grand_ok}/{grand_n} ok across {len(shards_meta)} shards")
+    return 0 if grand_ok > 0 else 1
 
 
 if __name__ == "__main__":

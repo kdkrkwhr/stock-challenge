@@ -581,14 +581,36 @@
     }
 
     async function fetchData() {
-      const url = "stock-data.json?t=" + Date.now();
-      const res = await fetch(url, { cache: "no-store" });
+      const bust = "?t=" + Date.now();
+      const res = await fetch("stock-data.json" + bust, { cache: "no-store" });
       if (!res.ok) throw new Error("HTTP " + res.status);
-      data = await res.json();
+      const manifest = await res.json();
+      const shards = Array.isArray(manifest.shards) ? manifest.shards : [];
+      let stocks = { ...(manifest.stocks || {}) };
+
+      if (shards.length) {
+        const parts = await Promise.all(
+          shards.map(async (s) => {
+            const path = typeof s === "string" ? s : s.path;
+            const r = await fetch(path + bust, { cache: "no-store" });
+            if (!r.ok) throw new Error(path + " HTTP " + r.status);
+            return r.json();
+          })
+        );
+        for (const part of parts) {
+          Object.assign(stocks, part.stocks || {});
+        }
+      }
+
+      data = {
+        updated: manifest.updated,
+        count: Object.keys(stocks).length,
+        stocks,
+      };
       const el = document.getElementById("updated");
-      const n = Object.keys(data.stocks || {}).length;
+      const n = data.count;
       el.textContent = data.updated
-        ? "업데이트 " + data.updated + " · " + n + "종목"
+        ? "업데이트 " + data.updated + " · " + n.toLocaleString("ko-KR") + "종목"
         : "업데이트 시각 없음";
       render();
     }
