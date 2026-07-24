@@ -25,6 +25,25 @@
       --accent: #00e5a8;
       --bar-track: rgba(255, 255, 255, 0.06);
       --nick: #c8d0e0;
+      --surface: #121826;
+      --input-bg: rgba(8, 12, 20, 0.7);
+      --logo-bg: #1a2233;
+    }
+    [data-theme="light"] {
+      --bg0: #eef1f7;
+      --bg1: #e2e7f1;
+      --panel: rgba(255, 255, 255, 0.92);
+      --border: rgba(0, 0, 0, 0.1);
+      --text: #11151f;
+      --muted: #5a6578;
+      --up: #e11d48;
+      --down: #2563eb;
+      --accent: #00a884;
+      --bar-track: rgba(0, 0, 0, 0.08);
+      --nick: #2a3346;
+      --surface: #ffffff;
+      --input-bg: rgba(0, 0, 0, 0.04);
+      --logo-bg: #e7ebf3;
     }
     * { box-sizing: border-box; }
     body {
@@ -86,7 +105,7 @@
     }
     .add-row input {
       flex: 1;
-      background: rgba(8, 12, 20, 0.7);
+      background: var(--input-bg);
       border: 1px solid var(--border);
       color: var(--text);
       border-radius: 14px;
@@ -103,7 +122,7 @@
       top: calc(100% + 6px);
       left: 0;
       right: 0;
-      background: #121826;
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 14px;
       max-height: 280px;
@@ -177,7 +196,7 @@
       width: 36px;
       height: 36px;
       border-radius: 10px;
-      background: #1a2233;
+      background: var(--logo-bg);
       object-fit: contain;
       flex-shrink: 0;
     }
@@ -275,7 +294,7 @@
     .gate.hidden { display: none; }
     .gate-card {
       width: min(400px, 100%);
-      background: #121826;
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 20px;
       padding: 1.6rem 1.35rem 1.35rem;
@@ -368,7 +387,7 @@
     }
     .tab {
       flex: 1;
-      background: rgba(8, 12, 20, 0.7);
+      background: var(--input-bg);
       border: 1px solid var(--border);
       color: var(--muted);
       border-radius: 12px;
@@ -456,7 +475,7 @@
       margin-bottom: 0.85rem;
     }
     .share-btn {
-      background: rgba(8, 12, 20, 0.7);
+      background: var(--input-bg);
       border: 1px solid var(--border);
       color: var(--text);
       border-radius: 12px;
@@ -518,6 +537,7 @@
       <div class="meta"><span id="updated">데이터 로딩 중…</span><span id="avg" class="avg"></span></div>
     </div>
     <button type="button" class="nick-chip" id="nickChip" title="닉네임 변경">—</button>
+    <button type="button" class="nick-chip" id="themeBtn" title="테마 전환 (다크/라이트)">🌙</button>
   </header>
 
   <main>
@@ -564,6 +584,20 @@
       try { return new Set(JSON.parse(localStorage.getItem(LS_FAV) || "[]")); } catch { return new Set(); }
     })();
     function saveFavs() { localStorage.setItem(LS_FAV, JSON.stringify([...favs])); }
+    const LS_THEME = "stock-challenge-theme";
+    function applyTheme(t) {
+      if (t === "light") document.documentElement.setAttribute("data-theme", "light");
+      else document.documentElement.removeAttribute("data-theme");
+      const b = document.getElementById("themeBtn");
+      if (b) b.textContent = t === "light" ? "☀️" : "🌙";
+    }
+    let theme = localStorage.getItem(LS_THEME) || "dark";
+    applyTheme(theme);
+    document.getElementById("themeBtn").addEventListener("click", () => {
+      theme = theme === "light" ? "dark" : "light";
+      localStorage.setItem(LS_THEME, theme);
+      applyTheme(theme);
+    });
     function toggleFav(code) {
       if (favs.has(code)) favs.delete(code); else favs.add(code);
       saveFavs();
