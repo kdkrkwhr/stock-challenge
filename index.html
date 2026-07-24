@@ -357,6 +357,29 @@
       cursor: pointer;
       font-family: inherit;
     }
+    .tabs {
+      display: flex;
+      gap: 0.4rem;
+      margin-bottom: 0.9rem;
+    }
+    .tab {
+      flex: 1;
+      background: rgba(8, 12, 20, 0.7);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 12px;
+      padding: 0.55rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s ease;
+    }
+    .tab.active {
+      color: #04140f;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
   </style>
 </head>
 <body>
@@ -392,6 +415,11 @@
       <input id="q" type="search" placeholder="종목·회사명 검색 (테슬라, 삼성…)" autocomplete="off" />
       <div class="dropdown" id="dd"></div>
     </div>
+    <div class="tabs" id="tabs">
+      <button type="button" class="tab active" data-m="all">전체</button>
+      <button type="button" class="tab" data-m="KR">KR</button>
+      <button type="button" class="tab" data-m="US">US</button>
+    </div>
     <div id="list" class="rank-list"></div>
   </main>
 
@@ -403,6 +431,7 @@
     let picks = loadPicks();
     let nick = localStorage.getItem(LS_NICK) || "";
     let deferredInstallPrompt = null;
+    let filterMarket = "all";
 
     function isStandalone() {
       return window.matchMedia("(display-mode: standalone)").matches
@@ -602,6 +631,15 @@
     });
     input.addEventListener("blur", () => setTimeout(() => dd.classList.remove("open"), 150));
 
+    const tabBar = document.getElementById("tabs");
+    tabBar.addEventListener("click", (e) => {
+      const btn = e.target.closest(".tab");
+      if (!btn) return;
+      filterMarket = btn.dataset.m;
+      [...tabBar.querySelectorAll(".tab")].forEach((t) => t.classList.toggle("active", t === btn));
+      render();
+    });
+
     function addPick(code) {
       if (!picks.includes(code)) {
         picks.push(code);
@@ -625,14 +663,26 @@
         return;
       }
 
-      const rows = picks.map((code) => {
-        const row = (data.stocks && data.stocks[code]) || {
-          name: code,
-          error: "데이터 없음",
-          change_pct: null,
-        };
-        return { code, row, pct: row.change_pct == null ? -Infinity : Number(row.change_pct) };
-      });
+      const rows = picks
+        .map((code) => {
+          const row = (data.stocks && data.stocks[code]) || {
+            name: code,
+            error: "데이터 없음",
+            change_pct: null,
+          };
+          return { code, row, pct: row.change_pct == null ? -Infinity : Number(row.change_pct) };
+        })
+        .filter(({ row }) => filterMarket === "all" || (row.market || "") === filterMarket);
+
+      if (!rows.length) {
+        list.innerHTML =
+          '<div class="empty">' +
+          (filterMarket === "all"
+            ? "픽 없음"
+            : filterMarket + " 시장에 픽 없음") +
+          "</div>";
+        return;
+      }
       rows.sort((a, b) => b.pct - a.pct);
 
       const finite = rows.filter((r) => Number.isFinite(r.pct)).map((r) => Math.abs(r.pct));
