@@ -159,6 +159,13 @@
       color: var(--muted);
       font-size: 0.75rem;
     }
+    .dropdown button.added { opacity: 0.55; }
+    .dropdown button.added .sub { color: var(--accent); }
+    .dropdown .none {
+      color: var(--muted);
+      font-size: 0.85rem;
+      padding: 0.7rem 0.9rem;
+    }
     .rank-list {
       display: flex;
       flex-direction: column;
@@ -858,12 +865,22 @@
       dd.innerHTML = "";
       activeIdx = -1;
       if (!items.length) {
-        dd.classList.remove("open");
+        if (input.value.trim()) {
+          const none = document.createElement("div");
+          none.className = "none";
+          none.textContent = "검색 결과 없음";
+          dd.appendChild(none);
+          dd.classList.add("open");
+        } else {
+          dd.classList.remove("open");
+        }
         return;
       }
       items.forEach((s) => {
+        const added = picks.includes(s.code);
         const b = document.createElement("button");
         b.type = "button";
+        if (added) b.classList.add("added");
         const logoHtml = s.logo
           ? '<img class="logo" alt="" src="' + s.logo + '" />'
           : '<span class="logo" style="display:grid;place-items:center;font-size:0.65rem">' +
@@ -874,7 +891,8 @@
           "<span><div></div><div class=\"sub\"></div></span>";
         b.querySelector("div").textContent = s.name + " (" + s.symbol + ")";
         b.querySelector(".sub").textContent =
-          [s.market, s.industry, s.name_eng].filter(Boolean).join(" · ");
+          [s.market, s.industry, s.name_eng].filter(Boolean).join(" · ") +
+          (added ? " · ✓ 추가됨" : "");
         b.addEventListener("mousedown", (e) => {
           e.preventDefault();
           addPick(s.code);
