@@ -2,7 +2,13 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07090f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
   <title>스톡챌린지</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet" />
@@ -313,6 +319,44 @@
       font-size: 0.82rem;
       margin-top: 0.35rem;
     }
+    .install-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      background: linear-gradient(135deg, rgba(0, 229, 168, 0.12), var(--panel));
+      border: 1px solid rgba(0, 229, 168, 0.35);
+      border-radius: 16px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 1rem;
+      backdrop-filter: blur(8px);
+    }
+    .install-bar.show { display: flex; }
+    .install-bar .t { margin: 0; font-size: 0.92rem; font-weight: 700; }
+    .install-bar .sub { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.75rem; }
+    .btn-install {
+      border: 0;
+      border-radius: 12px;
+      padding: 0.55rem 0.9rem;
+      font-weight: 800;
+      font-size: 0.85rem;
+      cursor: pointer;
+      background: var(--accent);
+      color: #04140f;
+      white-space: nowrap;
+      font-family: inherit;
+    }
+    .btn-install:hover { filter: brightness(1.08); }
+    .btn-hide {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 10px;
+      padding: 0.35rem 0.55rem;
+      font-size: 0.72rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
   </style>
 </head>
 <body>
@@ -334,6 +378,16 @@
   </header>
 
   <main>
+    <div class="install-bar" id="installBar">
+      <div>
+        <p class="t">크롬 앱으로 설치</p>
+        <p class="sub" id="installHint">웹에선 다운로드 버튼으로 홈 화면에 깔 수 있음</p>
+      </div>
+      <div style="display:flex;gap:0.4rem;align-items:center">
+        <button type="button" class="btn-hide" id="installDismiss">숨김</button>
+        <button type="button" class="btn-install" id="btnInstall">다운로드</button>
+      </div>
+    </div>
     <div class="add-row">
       <input id="q" type="search" placeholder="종목·회사명 검색 (테슬라, 삼성…)" autocomplete="off" />
       <div class="dropdown" id="dd"></div>
@@ -344,9 +398,55 @@
   <script>
     const LS_PICKS = "stock-challenge-picks";
     const LS_NICK = "stock-challenge-nick";
+    const LS_INSTALL_HIDE = "stock-challenge-install-hide";
     let data = { updated: null, stocks: {} };
     let picks = loadPicks();
     let nick = localStorage.getItem(LS_NICK) || "";
+    let deferredInstallPrompt = null;
+
+    function isStandalone() {
+      return window.matchMedia("(display-mode: standalone)").matches
+        || window.navigator.standalone === true;
+    }
+    function updateInstallUI() {
+      const bar = document.getElementById("installBar");
+      const hint = document.getElementById("installHint");
+      if (isStandalone() || localStorage.getItem(LS_INSTALL_HIDE) === "1") {
+        bar.classList.remove("show");
+        return;
+      }
+      bar.classList.add("show");
+      hint.textContent = deferredInstallPrompt
+        ? "누르면 크롬 앱처럼 설치됨"
+        : "크롬 주소창 ⊞ 설치 / 메뉴 → 앱 설치";
+    }
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      updateInstallUI();
+    });
+    window.addEventListener("appinstalled", () => {
+      deferredInstallPrompt = null;
+      updateInstallUI();
+    });
+    document.getElementById("btnInstall").addEventListener("click", async () => {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        updateInstallUI();
+        return;
+      }
+      alert("크롬에서 주소창 오른쪽 설치 아이콘(또는 메뉴 → 앱 설치) 눌러봐");
+    });
+    document.getElementById("installDismiss").addEventListener("click", () => {
+      localStorage.setItem(LS_INSTALL_HIDE, "1");
+      updateInstallUI();
+    });
+    updateInstallUI();
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    }
 
     function loadPicks() {
       try {
