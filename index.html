@@ -446,6 +446,19 @@
       font-size: 0.78rem;
       font-weight: 700;
     }
+    .alert-badge {
+      position: absolute;
+      top: 0.45rem;
+      left: 0.5rem;
+      background: rgba(227, 179, 65, 0.18);
+      border: 1px solid rgba(227, 179, 65, 0.5);
+      color: #e3b341;
+      border-radius: 8px;
+      padding: 0.1rem 0.4rem;
+      font-size: 0.68rem;
+      font-weight: 800;
+      z-index: 2;
+    }
   </style>
 </head>
 <body>
@@ -490,6 +503,7 @@
     <div class="share-bar" id="shareBar">
       <button type="button" class="share-btn" id="btnCopy">📋 픽 공유(복사)</button>
       <button type="button" class="share-btn ghost" id="btnImport">⬇ 가져오기</button>
+      <button type="button" class="share-btn ghost" id="btnTh">🔔 ±5%</button>
       <span class="share-msg" id="shareMsg"></span>
     </div>
     <div class="hl-bar" id="hl"></div>
@@ -500,11 +514,14 @@
     const LS_PICKS = "stock-challenge-picks";
     const LS_NICK = "stock-challenge-nick";
     const LS_INSTALL_HIDE = "stock-challenge-install-hide";
+    const LS_THRESH = "stock-challenge-threshold";
     let data = { updated: null, stocks: {} };
     let picks = loadPicks();
     let nick = localStorage.getItem(LS_NICK) || "";
     let deferredInstallPrompt = null;
     let filterMarket = "all";
+    let threshold = parseFloat(localStorage.getItem(LS_THRESH));
+    if (!Number.isFinite(threshold) || threshold <= 0) threshold = 5;
 
     function isStandalone() {
       return window.matchMedia("(display-mode: standalone)").matches
@@ -886,6 +903,12 @@
             fill.style.width = widthPct + "%";
           });
         }
+        if (threshold > 0 && Number.isFinite(pct) && Math.abs(pct) >= threshold) {
+          const badge = document.createElement("div");
+          badge.className = "alert-badge";
+          badge.textContent = "🔔 " + (pct > 0 ? "+" : "") + pct.toFixed(1) + "%";
+          el.appendChild(badge);
+        }
         list.appendChild(el);
       });
       updateAvg();
@@ -927,6 +950,19 @@
       } catch {
         alert("코드 이상함 ㅋㅋ 다시 확인해");
       }
+    });
+
+    const btnTh = document.getElementById("btnTh");
+    function updateThUI() { btnTh.textContent = "🔔 ±" + threshold + "%"; }
+    updateThUI();
+    btnTh.addEventListener("click", () => {
+      const v = prompt("등락률 알림 임계치(%) — 이 값 넘으면 배지 뜸 (0 입력 시 끄기):", threshold);
+      if (v === null) return;
+      const n = parseFloat(v);
+      threshold = Number.isFinite(n) && n > 0 ? n : 0;
+      localStorage.setItem(LS_THRESH, String(threshold));
+      updateThUI();
+      render();
     });
 
     fetchData().catch((e) => {

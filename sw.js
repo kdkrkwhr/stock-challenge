@@ -1,5 +1,5 @@
 /* ponytail: network-first data, cache shell for offline */
-const CACHE = "stock-challenge-v3";
+const CACHE = "stock-challenge-v4";
 const SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {
