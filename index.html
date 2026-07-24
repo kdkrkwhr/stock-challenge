@@ -533,6 +533,7 @@
       <button type="button" class="share-btn" id="btnCopy">📋 픽 공유(복사)</button>
       <button type="button" class="share-btn ghost" id="btnImport">⬇ 가져오기</button>
       <button type="button" class="share-btn ghost" id="btnTh">🔔 ±5%</button>
+      <button type="button" class="share-btn ghost" id="btnSort">↕ 등락률순</button>
       <span class="share-msg" id="shareMsg"></span>
     </div>
     <div class="hl-bar" id="hl"></div>
@@ -544,11 +545,13 @@
     const LS_NICK = "stock-challenge-nick";
     const LS_INSTALL_HIDE = "stock-challenge-install-hide";
     const LS_THRESH = "stock-challenge-threshold";
+    const LS_SORT = "stock-challenge-sort";
     let data = { updated: null, stocks: {} };
     let picks = loadPicks();
     let nick = localStorage.getItem(LS_NICK) || "";
     let deferredInstallPrompt = null;
     let filterMarket = "all";
+    let sortMode = localStorage.getItem(LS_SORT) || "pct";
     let threshold = parseFloat(localStorage.getItem(LS_THRESH));
     if (!Number.isFinite(threshold) || threshold <= 0) threshold = 5;
 
@@ -869,7 +872,7 @@
           "</div>";
         return;
       }
-      rows.sort((a, b) => b.pct - a.pct);
+      if (sortMode !== "order") rows.sort((a, b) => b.pct - a.pct);
 
       const finite = rows.filter((r) => Number.isFinite(r.pct)).map((r) => Math.abs(r.pct));
       const maxAbs = Math.max(1, ...finite);
@@ -936,8 +939,10 @@
         el.querySelector(".rm").addEventListener("click", () => removePick(code));
 
         const tag = el.querySelector(".tag");
-        if (i === bestIdx) tag.textContent = "🚀";
-        else if (i === worstIdx) tag.textContent = "🔻";
+        if (sortMode === "pct") {
+          if (i === bestIdx) tag.textContent = "🚀";
+          else if (i === worstIdx) tag.textContent = "🔻";
+        }
 
         if (row.error) {
           el.querySelector(".err").textContent = row.error;
@@ -1003,6 +1008,15 @@
     const btnTh = document.getElementById("btnTh");
     function updateThUI() { btnTh.textContent = "🔔 ±" + threshold + "%"; }
     updateThUI();
+    const btnSort = document.getElementById("btnSort");
+    function updateSortUI() { btnSort.textContent = sortMode === "order" ? "↕ 내순서" : "↕ 등락률순"; }
+    updateSortUI();
+    btnSort.addEventListener("click", () => {
+      sortMode = sortMode === "pct" ? "order" : "pct";
+      localStorage.setItem(LS_SORT, sortMode);
+      updateSortUI();
+      render();
+    });
     btnTh.addEventListener("click", () => {
       const v = prompt("등락률 알림 임계치(%) — 이 값 넘으면 배지 뜸 (0 입력 시 끄기):", threshold);
       if (v === null) return;
