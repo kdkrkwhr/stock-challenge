@@ -1,5 +1,5 @@
 /* ponytail: network-first data, cache shell for offline */
-const CACHE = "stock-challenge-v4";
+const CACHE = "stock-challenge-v5";
 const SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {
@@ -10,8 +10,16 @@ self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    ).then(() => self.clients.claim().then(() =>
+      self.clients.matchAll({ type: "window" }).then((cs) =>
+        cs.forEach((c) => c.postMessage({ type: "NEW_VERSION_READY" }))
+      )
+    ))
   );
+});
+
+self.addEventListener("message", (e) => {
+  if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("fetch", (e) => {
