@@ -380,6 +380,19 @@
       background: var(--accent);
       border-color: var(--accent);
     }
+    .offline-banner {
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(227, 179, 65, 0.12);
+      border: 1px solid rgba(227, 179, 65, 0.4);
+      border-radius: 12px;
+      padding: 0.6rem 0.9rem;
+      margin-bottom: 0.9rem;
+      color: #e3b341;
+      font-size: 0.82rem;
+    }
+    .offline-banner.show { display: flex; }
   </style>
 </head>
 <body>
@@ -411,6 +424,7 @@
         <button type="button" class="btn-install" id="btnInstall">다운로드</button>
       </div>
     </div>
+    <div class="offline-banner" id="offlineBanner">📡 오프라인 — 마지막 저장 데이터 보임</div>
     <div class="add-row">
       <input id="q" type="search" placeholder="종목·회사명 검색 (테슬라, 삼성…)" autocomplete="off" />
       <div class="dropdown" id="dd"></div>
@@ -473,6 +487,14 @@
       updateInstallUI();
     });
     updateInstallUI();
+
+    function updateOnlineUI() {
+      document.getElementById("offlineBanner").classList.toggle("show", !navigator.onLine);
+    }
+    window.addEventListener("online", updateOnlineUI);
+    window.addEventListener("offline", updateOnlineUI);
+    updateOnlineUI();
+
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
