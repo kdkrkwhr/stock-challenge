@@ -163,6 +163,7 @@ def row_from_list_item(item: dict, market: str, exchange_slug: str) -> tuple[str
 
     name = item.get("stockName") or symbol
     price = _parse_price(item.get("closePrice"))
+    change = _parse_price(item.get("compareToPreviousClosePrice"))
     change_pct = _parse_pct(item.get("fluctuationsRatio"))
     logo = item.get("itemLogoPngUrl") or item.get("itemLogoUrl")
     updated = item.get("localTradedAt") or _now_iso()
@@ -183,6 +184,8 @@ def row_from_list_item(item: dict, market: str, exchange_slug: str) -> tuple[str
     else:
         row["price"] = price
         row["change_pct"] = change_pct if change_pct is not None else 0.0
+        if change is not None:
+            row["change"] = change
     return key, row
 
 

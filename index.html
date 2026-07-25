@@ -281,11 +281,17 @@
     .rank-foot {
       display: flex;
       justify-content: space-between;
+      align-items: center;
+      gap: 0.4rem;
       margin-top: 0.4rem;
       font-size: 0.78rem;
       color: var(--muted);
       font-variant-numeric: tabular-nums;
     }
+    .rank-foot .chg { margin-left: auto; font-weight: 700; }
+    .rank-foot .chg.up { color: var(--up); }
+    .rank-foot .chg.down { color: var(--down); }
+    .rank-foot .chg.flat { color: var(--muted); }
     .spark-wrap {
       margin-top: 0.5rem;
       height: 30px;
@@ -1205,7 +1211,7 @@
               chgClass +
               '"></div></div>' +
               '<div class="spark-wrap"></div>' +
-              '<div class="rank-foot"><span class="price"></span><span class="sym"></span></div>');
+              '<div class="rank-foot"><span class="price"></span><span class="chg"></span><span class="sym"></span></div>');
 
         el.querySelector(".name").textContent = row.name || code;
         el.querySelector(".meta-line").textContent = metaBits.join(" · ") || code;
@@ -1224,6 +1230,17 @@
         } else {
           el.querySelector(".rank-pct").textContent = fmtPct(row.change_pct);
           el.querySelector(".price").textContent = fmtPrice(row.price, row.currency);
+          const chgEl = el.querySelector(".chg");
+          if (chgEl) {
+            if (Number.isFinite(row.change)) {
+              const up = row.change > 0, dn = row.change < 0;
+              const arrow = up ? "▲" : dn ? "▼" : "—";
+              chgEl.textContent = arrow + " " + fmtPrice(row.change, row.currency).replace("-", "");
+              chgEl.className = "chg " + (up ? "up" : dn ? "down" : "flat");
+            } else {
+              chgEl.textContent = "";
+            }
+          }
           el.querySelector(".sym").textContent = (row.symbol || code) + (row.currency ? " · " + row.currency : "");
           const sw = el.querySelector(".spark-wrap");
           if (sw) sw.innerHTML = sparkline(history[code]);
