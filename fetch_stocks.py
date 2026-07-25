@@ -127,7 +127,7 @@ def _get_json(url: str) -> dict:
         except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError) as e:
             last_err = e
             # 4xx 클라이언트 오류는 재시도해도 소용없음 — 바로 포기
-            if isinstance(e, HTTPError) and e.code in (400, 401, 403, 404):
+            if isinstance(e, HTTPError) and int(getattr(e, "code", 0)) in (400, 401, 403, 404):
                 break
             if attempt < MAX_ATTEMPTS:
                 sleep = SLEEP_SEC * attempt
