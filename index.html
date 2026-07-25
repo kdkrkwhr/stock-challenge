@@ -161,6 +161,17 @@
     }
     .dropdown button.added { opacity: 0.55; }
     .dropdown button.added .sub { color: var(--accent); }
+    .dropdown .dd-info { flex: 1; min-width: 0; }
+    .dropdown .dd-pct {
+      font-weight: 800;
+      font-size: 0.9rem;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      margin-left: 0.4rem;
+    }
+    .dropdown .dd-pct.up { color: var(--up); }
+    .dropdown .dd-pct.down { color: var(--down); }
+    .dropdown .dd-pct.flat { color: var(--muted); }
     .dropdown .none {
       color: var(--muted);
       font-size: 0.85rem;
@@ -951,9 +962,14 @@
           : '<span class="logo" style="display:grid;place-items:center;font-size:0.65rem">' +
             (s.market || "?") +
             "</span>";
+        const stk = (data.stocks || {})[s.code];
+        const pct = stk && Number.isFinite(stk.change_pct) ? stk.change_pct : null;
+        const pctHtml = pct == null ? "" :
+          '<span class="dd-pct ' + (pct > 0 ? "up" : pct < 0 ? "down" : "flat") + '">' + fmtPct(pct) + "</span>";
         b.innerHTML =
           logoHtml +
-          "<span><div></div><div class=\"sub\"></div></span>";
+          "<span class=\"dd-info\"><div></div><div class=\"sub\"></div></span>" +
+          pctHtml;
         b.querySelector("div").textContent = s.name + " (" + s.symbol + ")";
         b.querySelector(".sub").textContent =
           [s.market, s.industry, s.name_eng].filter(Boolean).join(" · ") +
