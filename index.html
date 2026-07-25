@@ -177,6 +177,14 @@
       font-size: 0.85rem;
       padding: 0.7rem 0.9rem;
     }
+    .dropdown .none { cursor: default; }
+    .dropdown mark {
+      background: rgba(0, 229, 168, 0.28);
+      color: var(--text);
+      border-radius: 3px;
+      padding: 0 1px;
+      font-weight: 700;
+    }
     .rank-list {
       display: flex;
       flex-direction: column;
@@ -858,6 +866,22 @@
       const sign = v > 0 ? "+" : "";
       return sign + v.toFixed(2) + "%";
     }
+    function escHtml(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+      );
+    }
+    function hlText(text, q) {
+      text = String(text == null ? "" : text);
+      if (!q) return escHtml(text);
+      const i = text.toLowerCase().indexOf(q.toLowerCase());
+      if (i < 0) return escHtml(text);
+      return (
+        escHtml(text.slice(0, i)) +
+        "<mark>" + escHtml(text.slice(i, i + q.length)) + "</mark>" +
+        escHtml(text.slice(i + q.length))
+      );
+    }
 
     function sparkline(points) {
       if (!points || points.length < 2) return "";
@@ -953,6 +977,7 @@
     function showDd(items) {
       dd.innerHTML = "";
       activeIdx = -1;
+      const q = input.value.trim().toLowerCase();
       if (!items.length) {
         if (input.value.trim()) {
           const none = document.createElement("div");
@@ -979,20 +1004,25 @@
         const pct = stk && Number.isFinite(stk.change_pct) ? stk.change_pct : null;
         const pctHtml = pct == null ? "" :
           '<span class="dd-pct ' + (pct > 0 ? "up" : pct < 0 ? "down" : "flat") + '">' + fmtPct(pct) + "</span>";
+        const subText = [s.market, s.industry, s.name_eng].filter(Boolean).join(" · ") +
+          (added ? " · ✓ 추가됨" : "");
         b.innerHTML =
           logoHtml +
-          "<span class=\"dd-info\"><div></div><div class=\"sub\"></div></span>" +
+          "<span class=\"dd-info\"><div>" + hlText(s.name + " (" + s.symbol + ")", q) + "</div>" +
+          "<div class=\"sub\">" + hlText(subText, q) + "</div></span>" +
           pctHtml;
-        b.querySelector("div").textContent = s.name + " (" + s.symbol + ")";
-        b.querySelector(".sub").textContent =
-          [s.market, s.industry, s.name_eng].filter(Boolean).join(" · ") +
-          (added ? " · ✓ 추가됨" : "");
         b.addEventListener("mousedown", (e) => {
           e.preventDefault();
           addPick(s.code);
         });
         dd.appendChild(b);
       });
+      if (items.length) {
+        const foot = document.createElement("div");
+        foot.className = "none";
+        foot.textContent = "🔍 " + items.length + "개" + (items.length >= 12 ? " (더 많음 — 검색어 구체화)" : "");
+        dd.appendChild(foot);
+      }
       dd.classList.add("open");
     }
 
