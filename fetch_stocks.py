@@ -239,11 +239,36 @@ def main() -> int:
 
     for market, exchange_slug, url, rel in SOURCES:
         stocks = fetch_market(market, exchange_slug, url)
+        out = ROOT / rel
+
+        # 일시적 API 장애로 빈 결과가 왔으면 이전 샤드를 그대로 유지한다.
+        # 빈 파일로 덮어쓰면 배포 데이터(예: KOSPI 2471종목)가 통째로 날아감.
+        if not stocks and out.exists():
+            print(
+                f"[KEEP] {exchange_slug}: 빈 결과 — 이전 샤드 유지 ({out})",
+                file=sys.stderr,
+            )
+            try:
+                prev = json.loads(out.read_text(encoding="utf-8"))
+                prev_stocks = prev.get("stocks", {}) or {}
+                grand_ok += sum(1 for r in prev_stocks.values() if "error" not in r)
+                grand_n += len(prev_stocks)
+                shards_meta.append(
+                    {
+                        "path": rel.replace("\\", "/"),
+                        "market": market,
+                        "exchange": exchange_slug,
+                        "count": len(prev_stocks),
+                    }
+                )
+                continue
+            except (OSError, json.JSONDecodeError) as e:
+                print(f"[WARN] {exchange_slug} 이전 샤드 읽기 실패: {e}", file=sys.stderr)
+
         ok = sum(1 for r in stocks.values() if "error" not in r)
         grand_ok += ok
         grand_n += len(stocks)
 
-        out = ROOT / rel
         out.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "updated": _now_iso(),
