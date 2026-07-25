@@ -633,6 +633,7 @@
       <button type="button" class="tab active" data-m="all">전체</button>
       <button type="button" class="tab" data-m="KR">KR</button>
       <button type="button" class="tab" data-m="US">US</button>
+      <button type="button" class="tab" data-m="fav" title="즐겨찾기만 보기">★</button>
     </div>
     <div class="share-bar" id="shareBar">
       <button type="button" class="share-btn" id="btnCopy">📋 픽 공유(복사)</button>
@@ -702,6 +703,7 @@
     let nick = localStorage.getItem(LS_NICK) || "";
     let deferredInstallPrompt = null;
     let filterMarket = "all";
+    let favOnly = false;
     let sortMode = localStorage.getItem(LS_SORT) || "pct";
     let threshold = parseFloat(localStorage.getItem(LS_THRESH));
     if (!Number.isFinite(threshold) || threshold <= 0) threshold = 5;
@@ -994,7 +996,9 @@
     tabBar.addEventListener("click", (e) => {
       const btn = e.target.closest(".tab");
       if (!btn) return;
-      filterMarket = btn.dataset.m;
+      const m = btn.dataset.m;
+      favOnly = m === "fav";
+      filterMarket = favOnly ? "all" : m;
       [...tabBar.querySelectorAll(".tab")].forEach((t) => t.classList.toggle("active", t === btn));
       render();
     });
@@ -1049,12 +1053,14 @@
           };
           return { code, row, pct: row.change_pct == null ? -Infinity : Number(row.change_pct) };
         })
-        .filter(({ row }) => filterMarket === "all" || (row.market || "") === filterMarket);
+        .filter(({ code, row }) => (filterMarket === "all" || (row.market || "") === filterMarket) && (!favOnly || favs.has(code)));
 
       if (!rows.length) {
         list.innerHTML =
           '<div class="empty">' +
-          (filterMarket === "all"
+          (favOnly
+            ? "즐겨찾기 픽 없음 — 카드의 ★ 누르면 추가됨"
+            : filterMarket === "all"
             ? "픽 없음"
             : filterMarket + " 시장에 픽 없음") +
           "</div>";
