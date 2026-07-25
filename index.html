@@ -535,6 +535,62 @@
     }
     .fav.on { color: #ffd24a; opacity: 1; }
     .fav:hover { opacity: 1; }
+    .league {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 0.85rem 0.95rem;
+      margin-bottom: 0.9rem;
+      backdrop-filter: blur(10px);
+    }
+    .league.hidden { display: none; }
+    .league h3 {
+      margin: 0 0 0.4rem;
+      font-size: 0.95rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .league .lg-add {
+      background: var(--accent);
+      color: #04140f;
+      border: 0;
+      border-radius: 10px;
+      padding: 0.35rem 0.7rem;
+      font-weight: 800;
+      font-size: 0.76rem;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .league .lg-add:hover { filter: brightness(1.08); }
+    .league .lg-row {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.5rem 0;
+      border-top: 1px solid var(--border);
+    }
+    .league .lg-row:first-of-type { border-top: 0; padding-top: 0.2rem; }
+    .league .lg-name { flex: 1; font-weight: 700; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .league .lg-name .me { color: var(--accent); font-size: 0.7rem; margin-left: 0.3rem; }
+    .league .lg-avg { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .league .lg-avg.up { color: var(--up); }
+    .league .lg-avg.down { color: var(--down); }
+    .league .lg-avg.flat { color: var(--muted); }
+    .league .lg-rm {
+      background: transparent;
+      border: 0;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      opacity: 0.6;
+      padding: 0.1rem 0.2rem;
+    }
+    .league .lg-rm:hover { opacity: 1; color: var(--up); }
+    .league .lg-empty { color: var(--muted); font-size: 0.82rem; padding: 0.4rem 0; }
   </style>
 </head>
 <body>
@@ -583,7 +639,12 @@
       <button type="button" class="share-btn ghost" id="btnImport">⬇ 가져오기</button>
       <button type="button" class="share-btn ghost" id="btnTh">🔔 ±5%</button>
       <button type="button" class="share-btn ghost" id="btnSort">↕ 등락률순</button>
+      <button type="button" class="share-btn ghost" id="btnLeague">🏆 챌린지</button>
       <span class="share-msg" id="shareMsg"></span>
+    </div>
+    <div class="league hidden" id="league">
+      <h3><span>🏆 챌린지 스코어보드</span><button type="button" class="lg-add" id="btnAddLeague">＋ 참가자</button></h3>
+      <div id="leagueList"></div>
     </div>
     <div class="hl-bar" id="hl"></div>
     <div id="list" class="rank-list"></div>
@@ -829,6 +890,8 @@
         ? "업데이트 " + data.updated + " · " + n.toLocaleString("ko-KR") + "종목"
         : "업데이트 시각 없음";
       render();
+      const lg = document.getElementById("league");
+      if (lg && !lg.classList.contains("hidden")) renderLeague();
     }
 
     function catalog() {
@@ -1163,6 +1226,75 @@
       updateThUI();
       render();
     });
+
+    // 챌린지 리그 (닉네임 + 합산 등락 스코어보드, 로컬)
+    const LS_LEAGUE = "stock-challenge-league";
+    let league = (() => { try { return JSON.parse(localStorage.getItem(LS_LEAGUE) || "[]"); } catch { return []; } })();
+    function saveLeague() { localStorage.setItem(LS_LEAGUE, JSON.stringify(league)); }
+    function avgOf(arr) {
+      const vals = (arr || []).map((c) => {
+        const r = (data.stocks || {})[c];
+        return r && Number.isFinite(r.change_pct) ? r.change_pct : null;
+      }).filter((v) => v !== null);
+      if (!vals.length) return null;
+      return vals.reduce((a, b) => a + b, 0) / vals.length;
+    }
+    const btnLeague = document.getElementById("btnLeague");
+    const leaguePanel = document.getElementById("league");
+    btnLeague.addEventListener("click", () => {
+      leaguePanel.classList.toggle("hidden");
+      if (!leaguePanel.classList.contains("hidden")) renderLeague();
+    });
+    document.getElementById("btnAddLeague").addEventListener("click", () => {
+      const code = prompt("친구 공유코드 붙여넣기 (챌린지 참가자 추가):");
+      if (!code) return;
+      try {
+        const obj = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
+        const n = String(obj.n || "참가자").slice(0, 16);
+        const p = Array.isArray(obj.p) ? obj.p : [];
+        if (league.some((x) => x.n === n)) { alert("이미 추가된 닉네임임 ㅋㅋ"); return; }
+        league.push({ n, p });
+        saveLeague();
+        renderLeague();
+      } catch { alert("코드 이상함 ㅋㅋ 다시 확인해"); }
+    });
+    function renderLeague() {
+      const list = document.getElementById("leagueList");
+      const me = { n: nick || "나", p: picks, me: true };
+      const parts = [me, ...league.filter((x) => Array.isArray(x.p) && x.p.length)];
+      const scored = parts
+        .map((p) => ({ n: p.n, me: !!p.me, avg: avgOf(p.p) }))
+        .sort((a, b) => (b.avg == null ? -Infinity : b.avg) - (a.avg == null ? -Infinity : a.avg));
+      if (!scored.length) { list.innerHTML = '<div class="lg-empty">참가자 추가하면 닉네임별 합산 등락 랭킹 뜸</div>'; return; }
+      list.innerHTML = "";
+      scored.forEach((s, i) => {
+        const row = document.createElement("div");
+        row.className = "lg-row";
+        let cls = "flat";
+        if (s.avg > 0) cls = "up";
+        else if (s.avg < 0) cls = "down";
+        row.innerHTML =
+          '<span class="rank-num' + (i < 3 ? " top3" : "") + '">' + (i + 1) + "</span>" +
+          '<span class="lg-name"></span>' +
+          '<span class="lg-avg ' + cls + '"></span>';
+        row.querySelector(".lg-name").textContent = s.n + (s.me ? " (나)" : "");
+        row.querySelector(".lg-avg").textContent = s.avg == null ? "—" : fmtPct(s.avg);
+        if (!s.me) {
+          const rm = document.createElement("button");
+          rm.type = "button";
+          rm.className = "lg-rm";
+          rm.title = "제거";
+          rm.textContent = "×";
+          rm.addEventListener("click", () => {
+            league = league.filter((x) => x.n !== s.n);
+            saveLeague();
+            renderLeague();
+          });
+          row.appendChild(rm);
+        }
+        list.appendChild(row);
+      });
+    }
 
     fetchData().catch((e) => {
       document.getElementById("updated").textContent = "데이터 로드 실패: " + e.message;
