@@ -113,10 +113,30 @@ def _exchange(payload: dict, fallback: str) -> str:
     return payload.get("stockExchangeName") or fallback
 
 
+# 재시도 설정 (네이버 429/5xx/타임아웃 같은 일시적 실패 대비)
+MAX_ATTEMPTS = 3
+
+
 def _get_json(url: str) -> dict:
-    req = Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
-    with urlopen(req, timeout=TIMEOUT) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    last_err: Exception | None = None
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            req = Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
+            with urlopen(req, timeout=TIMEOUT) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError) as e:
+            last_err = e
+            # 4xx 클라이언트 오류는 재시도해도 소용없음 — 바로 포기
+            if isinstance(e, HTTPError) and e.code in (400, 401, 403, 404):
+                break
+            if attempt < MAX_ATTEMPTS:
+                sleep = SLEEP_SEC * attempt
+                print(
+                    f"[RETRY] {url} (시도 {attempt} 실패: {e}); {sleep:.1f}s 대기",
+                    file=sys.stderr,
+                )
+                time.sleep(sleep)
+    raise last_err
 
 
 def row_from_list_item(item: dict, market: str, exchange_slug: str) -> tuple[str, dict] | None:
