@@ -1,19 +1,19 @@
 {
-  "updated": "2026-07-30T02:02:41+00:00",
-  "count": 11326,
-  "ok": 11326,
+  "updated": "2026-07-30T05:19:14+00:00",
+  "count": 11327,
+  "ok": 11327,
   "shards": [
     {
       "path": "data/kospi.json",
       "market": "KR",
       "exchange": "KOSPI",
-      "count": 2469
+      "count": 2471
     },
     {
       "path": "data/kosdaq.json",
       "market": "KR",
       "exchange": "KOSDAQ",
-      "count": 1819
+      "count": 1818
     },
     {
       "path": "data/nasdaq.json",
