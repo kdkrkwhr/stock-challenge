@@ -1,37 +1,37 @@
 {
-  "updated": "2026-08-07T06:02:22+00:00",
-  "count": 11356,
-  "ok": 11356,
+  "updated": "2026-08-07T07:38:29+00:00",
+  "count": 11370,
+  "ok": 11370,
   "shards": [
     {
       "path": "data/kospi.json",
       "market": "KR",
       "exchange": "KOSPI",
-      "count": 2473
+      "count": 2475
     },
     {
       "path": "data/kosdaq.json",
       "market": "KR",
       "exchange": "KOSDAQ",
-      "count": 1818
+      "count": 1820
     },
     {
       "path": "data/nasdaq.json",
       "market": "US",
       "exchange": "NASDAQ",
-      "count": 3953
+      "count": 3961
     },
     {
       "path": "data/nyse.json",
       "market": "US",
       "exchange": "NYSE",
-      "count": 2797
+      "count": 2798
     },
     {
       "path": "data/amex.json",
       "market": "US",
       "exchange": "AMEX",
-      "count": 315
+      "count": 316
     }
   ],
   "stocks": {}
